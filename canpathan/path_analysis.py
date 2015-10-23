@@ -29,12 +29,11 @@ class PathAnalysis(object):
         self.reaction_equations = gas.reaction_equations()
         self.species_names = gas.species_names
 
-        rates_of_production = np.zeros((gas.n_species, gas.n_reactions, len(self.time)))
         mole_fractions = np.zeros((len(self.time), gas.n_species))
         stoich_diff = gas.product_stoich_coeffs() - gas.reactant_stoich_coeffs()
-        for i in range(len(self.temperature)):
+
+        for i in range(len(self.time)):
             gas.TPY = self.temperature[i], self.pressure[i], self.mass_fractions[i, :]
-            rates_of_production[:, :, i] = gas.net_rates_of_progress*stoich_diff
             mole_fractions[i, :] = gas.X
 
         mask = mole_fractions[0, :] > 0
@@ -42,8 +41,14 @@ class PathAnalysis(object):
         initial_species_names = np.array(gas.species_names)[mask]
         fuel_index = np.where(initial_species_names == self.fuel)[0][0]
         conversion_indices = np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0]
+        rates_of_production = np.zeros((gas.n_species, gas.n_reactions, len(conversion_indices)))
+
+        for i in range(len(self.time[conversion_indices])):
+            gas.TPY = self.temperature[i], self.pressure[i], self.mass_fractions[i, :]
+            rates_of_production[:, :, i] = gas.net_rates_of_progress*stoich_diff
+
         integrated_rop = np.trapz(
-            rates_of_production[:, :, conversion_indices], x=self.time[conversion_indices], axis=2
+            rates_of_production, x=self.time[conversion_indices], axis=2
             )
 
         integrated_prod = np.where(integrated_rop > 0, integrated_rop, np.zeros(integrated_rop.shape))
