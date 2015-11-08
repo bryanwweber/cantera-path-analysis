@@ -1,5 +1,5 @@
-import cantera as ct
-import pandas as pd
+from cantera import Solution
+from pandas import DataFrame
 import numpy as np
 import tables
 
@@ -24,7 +24,7 @@ class PathAnalysis(object):
             self.pressure = table.cols.pressure[:]
 
     def generate_table(self):
-        gas = ct.Solution(self.chem_file_name)
+        gas = Solution(self.chem_file_name)
         self.n_reactions = gas.n_reactions
         self.reaction_equations = gas.reaction_equations()
         self.species_names = gas.species_names
@@ -67,7 +67,7 @@ class PathAnalysis(object):
         self.percent_combined = self.percent_prod + self.percent_dest
 
     def write_output(self):
-        df = pd.DataFrame(
+        df = DataFrame(
             np.hstack((np.array((range(1, self.n_reactions+1),)).T, self.percent_combined.T)),
             index=self.reaction_equations, columns=(['Reaction No.'] + self.species_names)
             )
