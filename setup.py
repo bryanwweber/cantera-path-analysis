@@ -1,12 +1,12 @@
 from setuptools import setup
 
 setup(
-    name='CanPathAn',
+    name='pychempath',
     version='0.0.1',
-    packages=['canpathan'],
+    packages=['pychempath'],
     entry_points={
       'console_scripts': [
-          'cantera-path-analysis = canpathan.__main__:main',
+          'pychempath = pychempath.__main__:main',
       ],
     },
 )
