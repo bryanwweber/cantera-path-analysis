@@ -44,15 +44,16 @@ class PathAnalysis(object):
         mole_fractions = self.get_mole_fractions(gas)
         conversion_indices = self.get_conversion_indices(mole_fractions)
 
-        rates_of_production = np.zeros((gas.n_species, gas.n_reactions, len(conversion_indices)))
+        integrated_rop = np.zeros((len(self.species_names), self.n_reactions))
 
-        for i in range(len(self.time[conversion_indices])):
+        for i in range(len(conversion_indices)-1):
             gas.TPY = self.temperature[i], self.pressure[i], self.mass_fractions[i, :]
-            rates_of_production[:, :, i] = gas.net_rates_of_progress*stoich_diff
+            rop_i = gas.net_rates_of_progress*stoich_diff
 
-        integrated_rop = np.trapz(
-            rates_of_production, x=self.time[conversion_indices], axis=2
-            )
+            gas.TPY = self.temperature[i+1], self.pressure[i+1], self.mass_fractions[i+1, :]
+            rop_ip = gas.net_rates_of_progress*stoich_diff
+
+            integrated_rop += (self.time[i+1] - self.time[i])*(rop_ip + rop_i)/2
 
         integrated_prod = np.where(integrated_rop > 0, integrated_rop, np.zeros(integrated_rop.shape))
         integrated_dest = np.where(integrated_rop < 0, integrated_rop, np.zeros(integrated_rop.shape))
@@ -60,14 +61,14 @@ class PathAnalysis(object):
         total_dest = -np.sum(integrated_dest, axis=1)
 
         with np.errstate(divide='ignore', invalid='ignore'):
-            self.percent_prod = (integrated_prod.T/total_prod*100).T
-            self.percent_prod[self.percent_prod == np.inf] = 0
-            self.percent_prod = np.nan_to_num(self.percent_prod)
-            self.percent_dest = (integrated_dest.T/total_dest*100).T
-            self.percent_dest[self.percent_dest == np.inf] = 0
-            self.percent_dest = np.nan_to_num(self.percent_dest)
+            percent_prod = (integrated_prod.T/total_prod*100).T
+            percent_prod[percent_prod == np.inf] = 0
+            percent_prod = np.nan_to_num(percent_prod)
+            percent_dest = (integrated_dest.T/total_dest*100).T
+            percent_dest[percent_dest == np.inf] = 0
+            percent_dest = np.nan_to_num(percent_dest)
 
-        self.percent_combined = self.percent_prod + self.percent_dest
+        self.percent_combined = percent_prod + percent_dest
 
     def write_output(self):
         df = DataFrame(
