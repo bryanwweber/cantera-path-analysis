@@ -27,6 +27,13 @@ class PathAnalysis(object):
         avg_molar_mass = 1/np.sum(self.mass_fractions/gas.molecular_weights, axis=1)
         return (self.mass_fractions.T*avg_molar_mass).T/gas.molecular_weights
 
+    def get_conversion_indices(self, mole_fractions):
+        mask = mole_fractions[0, :] > 0
+        molar_conversion = (1.0 - mole_fractions[:, mask]/mole_fractions[0, mask])*100
+        initial_species_names = np.array(self.species_names)[mask]
+        fuel_index = np.where(initial_species_names == self.fuel)[0][0]
+        return np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0]
+
     def generate_table(self):
         gas = Solution(self.chem_file_name)
         self.n_reactions = gas.n_reactions
@@ -35,12 +42,8 @@ class PathAnalysis(object):
 
         stoich_diff = gas.product_stoich_coeffs() - gas.reactant_stoich_coeffs()
         mole_fractions = self.get_mole_fractions(gas)
+        conversion_indices = self.get_conversion_indices(mole_fractions)
 
-        mask = mole_fractions[0, :] > 0
-        molar_conversion = (1.0 - mole_fractions[:, mask]/mole_fractions[0, mask])*100
-        initial_species_names = np.array(gas.species_names)[mask]
-        fuel_index = np.where(initial_species_names == self.fuel)[0][0]
-        conversion_indices = np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0]
         rates_of_production = np.zeros((gas.n_species, gas.n_reactions, len(conversion_indices)))
 
         for i in range(len(self.time[conversion_indices])):
