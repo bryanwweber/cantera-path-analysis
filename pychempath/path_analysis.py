@@ -23,21 +23,21 @@ class PathAnalysis(object):
             self.temperature = table.cols.temperature[:]
             self.pressure = table.cols.pressure[:]
 
+    def get_mole_fractions(self, gas):
+        avg_molar_mass = 1/np.sum(self.mass_fractions/gas.molecular_weights, axis=1)
+        return (self.mass_fractions.T*avg_molar_mass).T/gas.molecular_weights
+
     def generate_table(self):
         gas = Solution(self.chem_file_name)
         self.n_reactions = gas.n_reactions
         self.reaction_equations = gas.reaction_equations()
         self.species_names = gas.species_names
 
-        mole_fractions = np.zeros((len(self.time), gas.n_species))
         stoich_diff = gas.product_stoich_coeffs() - gas.reactant_stoich_coeffs()
-
-        for i in range(len(self.time)):
-            gas.TPY = self.temperature[i], self.pressure[i], self.mass_fractions[i, :]
-            mole_fractions[i, :] = gas.X
+        mole_fractions = self.get_mole_fractions(gas)
 
         mask = mole_fractions[0, :] > 0
-        molar_conversion = (1 - mole_fractions[:, mask]/mole_fractions[0, mask])*100
+        molar_conversion = (1.0 - mole_fractions[:, mask]/mole_fractions[0, mask])*100
         initial_species_names = np.array(gas.species_names)[mask]
         fuel_index = np.where(initial_species_names == self.fuel)[0][0]
         conversion_indices = np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0]
