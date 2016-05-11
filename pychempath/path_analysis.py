@@ -69,11 +69,10 @@ class PathAnalysis(object):
             percent_dest = np.nan_to_num(percent_dest)
 
         self.percent_combined = percent_prod + percent_dest
-
-    def write_output(self):
-        df = DataFrame(
+        self.df = DataFrame(
             np.hstack((np.array((range(1, self.n_reactions+1),)).T, self.percent_combined.T)),
             index=self.reaction_equations, columns=(['Reaction No.'] + self.species_names)
             )
 
-        df.to_excel(self.output_file_name)
+    def write_output(self):
+        self.df.to_excel(self.output_file_name)
