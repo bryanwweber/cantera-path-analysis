@@ -4,6 +4,7 @@ import scipy.sparse as sps
 import numpy as np
 import tables
 from collections import defaultdict
+from functools import partial
 
 
 class PathAnalysis(object):
@@ -46,8 +47,9 @@ class PathAnalysis(object):
         return len(np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0])
 
     def generate_rate_of_production(self, gas):
+        # See http://stackoverflow.com/a/25014320 for the use of partial here
         rate_of_production = defaultdict(
-            sps.lil_matrix((self.conversion_indices, self.n_reactions))
+            partial(sps.lil_matrix, (self.conversion_indices, self.n_reactions))
         )
 
         for j in range(self.conversion_indices):
