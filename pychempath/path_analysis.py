@@ -43,14 +43,14 @@ class PathAnalysis(object):
         molar_conversion = (1.0 - mole_fractions[:, mask]/mole_fractions[0, mask])*100
         initial_species_names = np.array(self.species_names)[mask]
         fuel_index = np.where(initial_species_names == self.fuel)[0][0]
-        return np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0]
+        return len(np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0])
 
     def generate_rate_of_production(self, gas):
         rate_of_production = defaultdict(
-            sps.lil_matrix((len(self.conversion_indices), self.n_reactions))
+            sps.lil_matrix((self.conversion_indices, self.n_reactions))
         )
 
-        for j in range(len(self.conversion_indices)):
+        for j in range(self.conversion_indices):
             gas.TPY = self.temperature[j], self.pressure[j], self.mass_fractions[j, :]
             rop = gas.net_rates_of_progress*self.stoich_diff
             for o, k in enumerate(self.species_names):
@@ -64,7 +64,7 @@ class PathAnalysis(object):
 
         for spec in self.species_names:
             integ_rop[spec] = np.trapz(y=self.rate_of_production[spec].todense(),
-                                       x=self.time[:len(self.conversion_indices)], axis=0).T
+                                       x=self.time[:self.conversion_indices], axis=0).T
 
         total_prod = (integ_rop[integ_rop > 0].values.sum(axis=0))/100
         total_dest = -(integ_rop[integ_rop < 0].values.sum(axis=0))/100
