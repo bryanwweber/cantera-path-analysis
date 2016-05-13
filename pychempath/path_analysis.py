@@ -8,8 +8,7 @@ from functools import partial
 
 
 class PathAnalysis(object):
-    def __init__(self, chem, save, output, percent, fuel):
-        chem_file_name = chem
+    def __init__(self, save, output, percent, fuel, chem=None):
         save_file_name = save
         output_file_name = output
         self.conversion_percent = percent
@@ -21,8 +20,13 @@ class PathAnalysis(object):
             self.mass_fractions = table.cols.mass_fractions[:]
             self.temperature = table.cols.temperature[:]
             self.pressure = table.cols.pressure[:]
+            if chem is None:
+                self.cti = save_file.root.cti_file.read().decode('utf-8')
 
-        gas = Solution(chem_file_name)
+        if chem is None:
+            gas = Solution(source=self.cti)
+        else:
+            gas = Solution(chem)
         self.n_reactions = gas.n_reactions
         self.reaction_equations = gas.reaction_equations()
         self.species_names = gas.species_names
