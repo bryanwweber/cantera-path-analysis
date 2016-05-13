@@ -73,4 +73,5 @@ class PathAnalysis(object):
 
         integ_rop[integ_rop > 0] /= total_prod
         integ_rop[integ_rop < 0] /= total_dest
+        integ_rop.insert(0, 'Reaction No.', range(1, self.n_reactions+1))
         return integ_rop
