@@ -68,8 +68,8 @@ class PathAnalysis(object):
             integ_rop[spec] = np.trapz(y=self.rate_of_production[spec].todense(),
                                        x=self.time[:self.conversion_indices], axis=0).T
 
-        total_prod = (integ_rop[integ_rop > 0].values.sum(axis=0))/100
-        total_dest = -(integ_rop[integ_rop < 0].values.sum(axis=0))/100
+        total_prod = (integ_rop[integ_rop > 0].fillna(0).values.sum(axis=0))/100
+        total_dest = -(integ_rop[integ_rop < 0].fillna(0).values.sum(axis=0))/100
 
         integ_rop[integ_rop > 0] /= total_prod
         integ_rop[integ_rop < 0] /= total_dest
