@@ -3,8 +3,6 @@ from pandas import DataFrame
 import scipy.sparse as sps
 import numpy as np
 import tables
-from collections import defaultdict
-from functools import partial
 
 
 class PathAnalysis(object):
@@ -28,6 +26,7 @@ class PathAnalysis(object):
         else:
             gas = Solution(chem)
         self.n_reactions = gas.n_reactions
+        self.n_species = gas.n_species
         self.reaction_equations = gas.reaction_equations()
         self.species_names = gas.species_names
         self.stoich_diff = gas.product_stoich_coeffs() - gas.reactant_stoich_coeffs()
@@ -51,16 +50,13 @@ class PathAnalysis(object):
         return len(np.where(molar_conversion[:, fuel_index] <= self.conversion_percent)[0])
 
     def generate_rate_of_production(self, gas):
-        # See http://stackoverflow.com/a/25014320 for the use of partial here
-        rate_of_production = defaultdict(
-            partial(sps.lil_matrix, (self.conversion_indices, self.n_reactions))
+        rate_of_production = sps.lil_matrix(
+            (self.conversion_indices*self.n_species, self.n_reactions), dtype=np.float64
         )
 
         for j in range(self.conversion_indices):
             gas.TPY = self.temperature[j], self.pressure[j], self.mass_fractions[j, :]
-            rop = gas.net_rates_of_progress*self.stoich_diff
-            for o, k in enumerate(self.species_names):
-                rate_of_production[k][j, :] = rop[o, :]
+            rate_of_production[j*self.n_species:(j+1)*self.n_species, :] = gas.net_rates_of_progress*self.stoich_diff  # noqa
 
         return rate_of_production
 
@@ -68,8 +64,8 @@ class PathAnalysis(object):
         integ_rop = DataFrame(index=self.reaction_equations, columns=self.species_names,
                               dtype=np.float64)
 
-        for spec in self.species_names:
-            integ_rop[spec] = np.trapz(y=self.rate_of_production[spec].todense(),
+        for k, spec in enumerate(self.species_names):
+            integ_rop[spec] = np.trapz(y=self.rate_of_production[k::self.n_species].todense(),
                                        x=self.time[:self.conversion_indices], axis=0).T
 
         total_prod = (integ_rop[integ_rop > 0].fillna(0).values.sum(axis=0))/100
